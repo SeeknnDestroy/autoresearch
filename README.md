@@ -39,6 +39,34 @@ uv run train.py
 
 If the above commands all work ok, your setup is working and you can go into autonomous research mode.
 
+## Autoresearch Studio
+
+This fork also includes **Autoresearch Studio**, a small local research lab designed for Apple Silicon and other cheaper local setups. It keeps the original repo intact as a reference lane, but adds a browser UI, a session orchestrator, persistent run history, and a TinyStories-style local task backend that is fast enough to watch and iterate on from a laptop.
+
+```bash
+# Install Python dependencies
+uv sync
+
+# Start the local Studio app
+uv run autoresearch-studio
+```
+
+Then open `http://127.0.0.1:8765` in your browser.
+
+What Studio adds:
+
+- a Mac-friendly local task backend for cheap baseline and candidate experiments
+- a browser UI with run timeline, metrics, recipe diffs, generated samples, and agent notes
+- a proposer / implementer / runner / analyst loop with keep-or-discard decisions
+- persisted session state in `.studio/`
+
+For frontend QA, there is also a Playwright smoke test:
+
+```bash
+npm install
+npm run test:ui
+```
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
@@ -56,6 +84,7 @@ prepare.py      — constants, data prep + runtime utilities (do not modify)
 train.py        — model, optimizer, training loop (agent modifies this)
 program.md      — agent instructions
 pyproject.toml  — dependencies
+studio/         — local Studio app, API, task backend, UI
 ```
 
 ## Design choices

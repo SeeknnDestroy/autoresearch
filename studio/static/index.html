@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autoresearch Studio</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <div class="atmosphere"></div>
+    <div class="grain"></div>
+    <main class="shell">
+      <header class="hero panel">
+        <div class="hero-copy">
+          <p class="eyebrow">Mac-first autonomous research lab</p>
+          <h1>Autoresearch Studio</h1>
+          <p class="hero-text">
+            A local editorial cockpit for cheap language-model experiments: baseline,
+            candidate, critique, and morning report in one watchable loop.
+          </p>
+        </div>
+        <div class="hero-instruments">
+          <div class="signal-card">
+            <span class="signal-label">Session State</span>
+            <strong id="session-status">idle</strong>
+            <span id="session-meta">No active session yet.</span>
+          </div>
+          <div class="signal-card">
+            <span class="signal-label">Best Run</span>
+            <strong id="best-metric">--</strong>
+            <span id="best-meta">Waiting for the first baseline.</span>
+          </div>
+          <div class="controls">
+            <button id="start-button" class="button button-primary">Start Local Session</button>
+            <button id="stop-button" class="button button-secondary">Stop Gracefully</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="dashboard">
+        <aside class="column column-left">
+          <section class="panel summary-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Morning report</p>
+              <h2>Latest synthesis</h2>
+            </div>
+            <p id="next-move" class="summary-lead">
+              Start a session to generate the first baseline.
+            </p>
+            <div id="report-lessons" class="lesson-stack"></div>
+          </section>
+
+          <section class="panel timeline-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Experiment chronology</p>
+              <h2>Run timeline</h2>
+            </div>
+            <div id="run-list" class="run-list">
+              <article class="run-empty">
+                The timeline is empty. Start the Studio to watch baseline and candidate runs land here.
+              </article>
+            </div>
+          </section>
+        </aside>
+
+        <section class="column column-right">
+          <section class="panel detail-panel">
+            <div class="detail-header">
+              <div>
+                <p class="eyebrow">Selected run</p>
+                <h2 id="detail-title">No run selected</h2>
+              </div>
+              <div id="detail-badges" class="detail-badges"></div>
+            </div>
+
+            <div id="metrics-grid" class="metrics-grid">
+              <article class="metric-card">
+                <span class="metric-label">val_bpb</span>
+                <strong class="metric-value">--</strong>
+              </article>
+            </div>
+
+            <div class="detail-columns">
+              <section class="subpanel">
+                <div class="subpanel-heading">
+                  <p class="eyebrow">Sample output</p>
+                  <h3>Generated story fragment</h3>
+                </div>
+                <pre id="sample-output" class="code-block sample-block">The selected run's sample will appear here.</pre>
+              </section>
+
+              <section class="subpanel">
+                <div class="subpanel-heading">
+                  <p class="eyebrow">Recipe diff</p>
+                  <h3>What changed</h3>
+                </div>
+                <pre id="diff-output" class="code-block diff-block">No candidate diff yet.</pre>
+              </section>
+            </div>
+
+            <section class="subpanel notes-panel">
+              <div class="subpanel-heading">
+                <p class="eyebrow">Agent notebook</p>
+                <h3>Proposal, implementation, analysis</h3>
+              </div>
+              <div class="note-grid">
+                <article class="note-card">
+                  <span class="note-role">Proposer</span>
+                  <p id="proposal-note">Waiting for the first run.</p>
+                </article>
+                <article class="note-card">
+                  <span class="note-role">Implementer</span>
+                  <p id="implementer-note">The Studio will describe the recipe change and execution plan here.</p>
+                </article>
+                <article class="note-card">
+                  <span class="note-role">Analyst</span>
+                  <p id="analyst-note">The keep-or-discard judgment will appear after evaluation.</p>
+                </article>
+              </div>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

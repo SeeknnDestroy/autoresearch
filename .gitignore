@@ -21,3 +21,11 @@ dev/
 
 # Results file
 results.tsv
+
+# Studio runtime files
+.studio/
+.studio-playwright/
+node_modules/
+playwright-report/
+test-results/
+package-lock.json
