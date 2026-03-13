@@ -104,8 +104,8 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
   gap: 28px;
-  min-height: 360px;
-  padding: 34px;
+  min-height: 300px;
+  padding: 28px 30px;
   animation: rise-in 700ms ease both;
 }
 
@@ -147,7 +147,7 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(4rem, 8.4vw, 7.1rem);
+  font-size: clamp(3.45rem, 7vw, 6rem);
   max-width: 8ch;
 }
 
@@ -174,7 +174,7 @@ h3 {
 
 .hero-text {
   max-width: 56ch;
-  font-size: 1.06rem;
+  font-size: 1rem;
   margin: 0;
 }
 
@@ -182,7 +182,7 @@ h3 {
   position: relative;
   display: grid;
   gap: 8px;
-  padding: 18px 20px 18px 24px;
+  padding: 15px 18px 15px 22px;
   border-radius: var(--radius-l);
   background: linear-gradient(135deg, rgba(16, 23, 34, 0.92), rgba(27, 63, 81, 0.92));
   color: var(--white);
@@ -201,8 +201,8 @@ h3 {
 .stage-banner strong {
   display: block;
   padding-left: 12px;
-  font-size: 1.05rem;
-  line-height: 1.5;
+  font-size: 0.98rem;
+  line-height: 1.42;
 }
 
 .controls {
@@ -215,7 +215,7 @@ h3 {
   appearance: none;
   border: 0;
   border-radius: 999px;
-  padding: 16px 24px;
+  padding: 14px 22px;
   cursor: pointer;
   font-family: var(--mono);
   font-size: 0.78rem;
@@ -248,8 +248,8 @@ h3 {
 .signal-card {
   display: grid;
   gap: 8px;
-  min-height: 104px;
-  padding: 18px 20px;
+  min-height: 92px;
+  padding: 16px 18px;
   border-radius: var(--radius-l);
   background: linear-gradient(180deg, rgba(16, 23, 34, 0.96), rgba(17, 29, 42, 0.88));
   color: var(--white);
@@ -259,7 +259,7 @@ h3 {
 .signal-card-major strong,
 .signal-card strong {
   display: block;
-  font-size: 2rem;
+  font-size: 1.8rem;
   line-height: 1;
 }
 
@@ -280,7 +280,7 @@ h3 {
 }
 
 .score-pill {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: var(--radius-m);
   background: rgba(255, 250, 241, 0.76);
   border: 1px solid rgba(17, 22, 32, 0.08);
@@ -289,8 +289,8 @@ h3 {
 
 .score-value {
   display: block;
-  margin-top: 8px;
-  font-size: 1.6rem;
+  margin-top: 6px;
+  font-size: 1.35rem;
   font-family: var(--display);
 }
 
@@ -309,7 +309,7 @@ h3 {
 .timeline-panel,
 .mutation-panel,
 .detail-panel {
-  padding: 26px 28px 30px;
+  padding: 22px 24px 26px;
 }
 
 .panel-heading,
@@ -669,10 +669,16 @@ h3 {
   .run-spotlight,
   .detail-columns,
   .detail-columns-compact,
-  .note-grid,
-  .signal-cluster,
-  .score-strip {
+  .note-grid {
     grid-template-columns: 1fr;
+  }
+
+  .signal-cluster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .score-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .metrics-grid {
@@ -699,15 +705,78 @@ h3 {
   }
 
   h1 {
-    font-size: 3.5rem;
+    font-size: 2.35rem;
+    max-width: 7ch;
+  }
+
+  .hero {
+    gap: 16px;
+    min-height: 0;
+    padding: 18px 18px 20px;
+  }
+
+  .hero-copy,
+  .hero-right {
+    gap: 12px;
+  }
+
+  .hero-text {
+    font-size: 0.88rem;
+    line-height: 1.46;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  .stage-banner {
+    padding: 10px 12px 10px 16px;
+  }
+
+  .stage-banner strong {
+    font-size: 0.84rem;
+    line-height: 1.28;
+  }
+
+  .signal-card {
+    min-height: 74px;
+    padding: 14px;
+  }
+
+  .signal-card-major strong,
+  .signal-card strong {
+    font-size: 1.35rem;
+  }
+
+  .signal-cluster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .score-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .score-pill {
+    padding: 10px 12px;
+  }
+
+  .score-value {
+    font-size: 1.15rem;
   }
 
   .controls {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .button {
     width: 100%;
+    padding: 12px 12px;
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
   }
 
   .metrics-grid {
@@ -720,7 +789,25 @@ h3 {
 }
 
 @media (max-width: 480px) {
+  .eyebrow,
+  .signal-label,
+  .score-label,
+  .metric-label,
+  .note-role,
+  .stage-kicker,
+  .spotlight-kicker,
+  .stage-label,
+  .panel-chip {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+  }
+
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .signal-card-major strong,
+  .signal-card strong {
+    font-size: 1.18rem;
   }
 }
