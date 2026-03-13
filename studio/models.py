@@ -14,7 +14,7 @@ def utc_now_iso() -> str:
 
 @dataclass
 class BudgetPolicy:
-    max_runs: int = 3
+    max_runs: int = 5
     max_runtime_seconds: int = 240
     max_model_calls: int = 0
     max_concurrent_runs: int = 1
@@ -41,6 +41,7 @@ class RunRecord:
     recipe_sha: str
     parent_recipe_sha: str | None
     status: str
+    stage: str
     decision: str
     change_spec: JSONDict
     metrics: JSONDict = field(default_factory=dict)
@@ -68,6 +69,7 @@ class RunRecord:
             recipe_sha=data.get("recipe_sha", ""),
             parent_recipe_sha=data.get("parent_recipe_sha"),
             status=data["status"],
+            stage=data.get("stage", "queued"),
             decision=data.get("decision", "pending"),
             change_spec=data.get("change_spec", {}),
             metrics=data.get("metrics", {}),
@@ -117,6 +119,7 @@ class SessionRecord:
     budget_policy: BudgetPolicy
     current_recipe: JSONDict
     current_recipe_sha: str
+    stage_headline: str = "The lab is waiting for its first baseline."
     runs: list[RunRecord] = field(default_factory=list)
     lessons: list[LessonRecord] = field(default_factory=list)
     stop_requested: bool = False
@@ -134,6 +137,7 @@ class SessionRecord:
             "budget_policy": asdict(self.budget_policy),
             "current_recipe": self.current_recipe,
             "current_recipe_sha": self.current_recipe_sha,
+            "stage_headline": self.stage_headline,
             "runs": [asdict(run) for run in self.runs],
             "lessons": [asdict(lesson) for lesson in self.lessons],
             "stop_requested": self.stop_requested,
@@ -153,6 +157,7 @@ class SessionRecord:
             budget_policy=BudgetPolicy.from_dict(data.get("budget_policy")),
             current_recipe=data.get("current_recipe", {}),
             current_recipe_sha=data.get("current_recipe_sha", ""),
+            stage_headline=data.get("stage_headline", "The lab is waiting for its first baseline."),
             runs=[RunRecord.from_dict(run) for run in data.get("runs", [])],
             lessons=[LessonRecord.from_dict(lesson) for lesson in data.get("lessons", [])],
             stop_requested=bool(data.get("stop_requested", False)),

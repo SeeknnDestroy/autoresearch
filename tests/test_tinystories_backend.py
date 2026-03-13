@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from studio.tasks.tinystories_local import TinyStoriesLocalBackend
 
@@ -36,3 +37,19 @@ def test_backend_baseline_candidate_cycle(tmp_path: Path) -> None:
 
     restored = backend.rollback(baseline.recipe_sha)
     assert restored == current_recipe
+
+
+def test_proposer_avoids_repeating_the_same_recent_field(tmp_path: Path) -> None:
+    backend = TinyStoriesLocalBackend(tmp_path, device_preference="cpu")
+    recipe = backend.prepare()
+
+    runs = [
+        SimpleNamespace(change_spec={"field": "learning_rate"}, novelty_fingerprint="baseline"),
+        SimpleNamespace(change_spec={"field": "learning_rate"}, novelty_fingerprint="learning_rate:down:0.0096"),
+        SimpleNamespace(change_spec={"field": "learning_rate"}, novelty_fingerprint="learning_rate:up:0.015"),
+    ]
+
+    proposed = backend.propose_change(runs, recipe)
+
+    assert proposed["field"] != "learning_rate"
+    assert proposed["why"]

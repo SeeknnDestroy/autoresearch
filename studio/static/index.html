@@ -16,24 +16,46 @@
           <p class="eyebrow">Mac-first autonomous research lab</p>
           <h1>Autoresearch Studio</h1>
           <p class="hero-text">
-            A local editorial cockpit for cheap language-model experiments: baseline,
-            candidate, critique, and morning report in one watchable loop.
+            A local stage for cheap language-model experiments, where every run gets a
+            hypothesis, a visible pulse, a verdict, and a story fragment worth staring at.
           </p>
+
+          <div class="stage-banner">
+            <span class="stage-kicker">Now on stage</span>
+            <strong id="stage-headline">The lab is waiting for its first baseline.</strong>
+          </div>
+
+          <div class="controls">
+            <button id="start-button" class="button button-primary">Start Local Session</button>
+            <button id="stop-button" class="button button-secondary">Stop Gracefully</button>
+          </div>
         </div>
-        <div class="hero-instruments">
-          <div class="signal-card">
+
+        <div class="hero-right">
+          <div class="signal-card signal-card-major">
             <span class="signal-label">Session State</span>
             <strong id="session-status">idle</strong>
             <span id="session-meta">No active session yet.</span>
           </div>
-          <div class="signal-card">
-            <span class="signal-label">Best Run</span>
-            <strong id="best-metric">--</strong>
-            <span id="best-meta">Waiting for the first baseline.</span>
+
+          <div class="signal-cluster">
+            <div class="signal-card">
+              <span class="signal-label">Best Run</span>
+              <strong id="best-metric">--</strong>
+              <span id="best-meta">Waiting for the first baseline.</span>
+            </div>
+            <div class="signal-card">
+              <span class="signal-label">Spotlight</span>
+              <strong id="spotlight-title">No run yet</strong>
+              <span id="spotlight-meta">The newest run will narrate itself here.</span>
+            </div>
           </div>
-          <div class="controls">
-            <button id="start-button" class="button button-primary">Start Local Session</button>
-            <button id="stop-button" class="button button-secondary">Stop Gracefully</button>
+
+          <div class="score-strip" id="score-strip" aria-label="Session scoreboard">
+            <article class="score-pill">
+              <span class="score-label">Completed</span>
+              <strong class="score-value">0</strong>
+            </article>
           </div>
         </div>
       </header>
@@ -42,8 +64,11 @@
         <aside class="column column-left">
           <section class="panel summary-panel">
             <div class="panel-heading">
-              <p class="eyebrow">Morning report</p>
-              <h2>Latest synthesis</h2>
+              <div>
+                <p class="eyebrow">Morning report</p>
+                <h2>Latest synthesis</h2>
+              </div>
+              <span class="panel-chip">Analyst notes</span>
             </div>
             <p id="next-move" class="summary-lead">
               Start a session to generate the first baseline.
@@ -51,10 +76,28 @@
             <div id="report-lessons" class="lesson-stack"></div>
           </section>
 
+          <section class="panel mutation-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Mutation atlas</p>
+                <h2>Where the lab is poking</h2>
+              </div>
+              <span class="panel-chip">Recent moves</span>
+            </div>
+            <div id="mutation-atlas" class="mutation-atlas">
+              <article class="atlas-empty">
+                The atlas will light up once the proposer starts mutating the recipe.
+              </article>
+            </div>
+          </section>
+
           <section class="panel timeline-panel">
             <div class="panel-heading">
-              <p class="eyebrow">Experiment chronology</p>
-              <h2>Run timeline</h2>
+              <div>
+                <p class="eyebrow">Experiment chronology</p>
+                <h2>Run timeline</h2>
+              </div>
+              <span class="panel-chip">Click a run</span>
             </div>
             <div id="run-list" class="run-list">
               <article class="run-empty">
@@ -66,12 +109,24 @@
 
         <section class="column column-right">
           <section class="panel detail-panel">
-            <div class="detail-header">
+            <div class="detail-topline">
               <div>
                 <p class="eyebrow">Selected run</p>
                 <h2 id="detail-title">No run selected</h2>
               </div>
               <div id="detail-badges" class="detail-badges"></div>
+            </div>
+
+            <div class="run-spotlight">
+              <div class="spotlight-copy">
+                <span class="spotlight-kicker">Run pulse</span>
+                <strong id="detail-headline">Choose a run to inspect its pulse.</strong>
+                <p id="detail-subline">The lab will surface the mutation vibe, stage, and verdict here.</p>
+              </div>
+              <div class="spotlight-stage">
+                <span class="stage-label">Stage</span>
+                <strong id="detail-stage">idle</strong>
+              </div>
             </div>
 
             <div id="metrics-grid" class="metrics-grid">
@@ -84,25 +139,70 @@
             <div class="detail-columns">
               <section class="subpanel">
                 <div class="subpanel-heading">
-                  <p class="eyebrow">Sample output</p>
-                  <h3>Generated story fragment</h3>
+                  <div>
+                    <p class="eyebrow">Sample output</p>
+                    <h3>Story reel</h3>
+                  </div>
+                  <span class="panel-chip">Generated text</span>
                 </div>
                 <pre id="sample-output" class="code-block sample-block">The selected run's sample will appear here.</pre>
               </section>
 
               <section class="subpanel">
                 <div class="subpanel-heading">
-                  <p class="eyebrow">Recipe diff</p>
-                  <h3>What changed</h3>
+                  <div>
+                    <p class="eyebrow">Recipe diff</p>
+                    <h3>Mutation sheet</h3>
+                  </div>
+                  <span class="panel-chip">Before / after</span>
                 </div>
                 <pre id="diff-output" class="code-block diff-block">No candidate diff yet.</pre>
               </section>
             </div>
 
+            <div class="detail-columns detail-columns-compact">
+              <section class="subpanel">
+                <div class="subpanel-heading">
+                  <div>
+                    <p class="eyebrow">Mutation card</p>
+                    <h3>Why this move</h3>
+                  </div>
+                  <span class="panel-chip">Proposer intent</span>
+                </div>
+                <div class="mutation-card" id="mutation-card">
+                  <div class="mutation-icon">BASELINE</div>
+                  <div class="mutation-body">
+                    <strong>No mutation yet</strong>
+                    <p>The proposer will explain the axis, vibe, and reason for the next change here.</p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="subpanel">
+                <div class="subpanel-heading">
+                  <div>
+                    <p class="eyebrow">Field change</p>
+                    <h3>Dial movement</h3>
+                  </div>
+                  <span class="panel-chip">Recipe delta</span>
+                </div>
+                <div class="dial-card" id="dial-card">
+                  <div class="dial-values">
+                    <span>from <strong>--</strong></span>
+                    <span>to <strong>--</strong></span>
+                  </div>
+                  <p>The exact field movement will appear once a candidate run lands.</p>
+                </div>
+              </section>
+            </div>
+
             <section class="subpanel notes-panel">
               <div class="subpanel-heading">
-                <p class="eyebrow">Agent notebook</p>
-                <h3>Proposal, implementation, analysis</h3>
+                <div>
+                  <p class="eyebrow">Agent notebook</p>
+                  <h3>Proposal, implementation, analysis</h3>
+                </div>
+                <span class="panel-chip">Four-role loop</span>
               </div>
               <div class="note-grid">
                 <article class="note-card">

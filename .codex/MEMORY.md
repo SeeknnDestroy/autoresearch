@@ -8,3 +8,6 @@
 - Studio architecture: Python-served web app in `studio/` with FastAPI, SSE updates, persisted `.studio/` session storage, and a cheap TinyStories-style char-RNN backend for local baseline/candidate runs.
 - Frontend direction: editorial lab notebook + research cockpit aesthetic, with browser QA covered by Playwright.
 - Packaging note: `torch` now falls back to the default PyPI source on macOS while keeping the `pytorch-cu128` index for non-Darwin platforms.
+- UX direction update: the Studio now leans into a stage-like “research cabaret” feel with live stage headlines, scorecards, mutation atlas, and run spotlight rather than a plain dashboard.
+- Reliability lesson: session persistence must use atomic writes plus a tiny retry on reads; Playwright caught a real race where the UI could read `session.json` mid-write.
+- Experiment behavior update: default sessions now run 5 local experiments and the proposer avoids repeating the same field in back-to-back candidate moves, which makes sessions more interesting to watch.

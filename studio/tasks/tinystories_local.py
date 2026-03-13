@@ -42,6 +42,39 @@ FIELD_ORDER = [
     "embedding_dim",
 ]
 
+FIELD_PERSONAS = {
+    "learning_rate": {
+        "icon": "tempo",
+        "mood": "reckless tempo",
+        "why": "change how aggressively the model chases fresh patterns",
+    },
+    "hidden_dim": {
+        "icon": "capacity",
+        "mood": "deeper memory",
+        "why": "trade memory cost against narrative capacity",
+    },
+    "sequence_len": {
+        "icon": "scope",
+        "mood": "longer reach",
+        "why": "shift between local speed and story continuity",
+    },
+    "dropout": {
+        "icon": "tension",
+        "mood": "controlled chaos",
+        "why": "regulate how much certainty the model is allowed to keep",
+    },
+    "batch_size": {
+        "icon": "stability",
+        "mood": "steadier rhythm",
+        "why": "balance noisy updates against smoother gradients",
+    },
+    "embedding_dim": {
+        "icon": "texture",
+        "mood": "richer texture",
+        "why": "trade lexical nuance against speed",
+    },
+}
+
 FIELD_BOUNDS = {
     "learning_rate": (0.004, 0.04),
     "hidden_dim": (48, 192),
@@ -150,12 +183,16 @@ class TinyStoriesLocalBackend(TaskBackend):
 
     def propose_change(self, runs: list[Any], current_recipe: dict[str, Any]) -> dict[str, Any]:
         tried = {getattr(run, "novelty_fingerprint", "") for run in runs}
-        for offset, field in enumerate(FIELD_ORDER):
+        recent_fields = [getattr(run, "change_spec", {}).get("field") for run in runs[-2:]]
+        field_rotation = FIELD_ORDER[len(runs) % len(FIELD_ORDER):] + FIELD_ORDER[:len(runs) % len(FIELD_ORDER)]
+        preferred_fields = [field for field in field_rotation if field not in recent_fields]
+        candidate_fields = preferred_fields or field_rotation
+        for offset, field in enumerate(candidate_fields):
             direction = "up" if (len(runs) + offset) % 2 == 0 else "down"
             spec = self._change_spec(current_recipe, field, direction)
             if spec["novelty_fingerprint"] not in tried:
                 return spec
-        field = FIELD_ORDER[len(runs) % len(FIELD_ORDER)]
+        field = candidate_fields[0]
         direction = "down" if len(runs) % 2 else "up"
         return self._change_spec(current_recipe, field, direction)
 
@@ -197,6 +234,7 @@ class TinyStoriesLocalBackend(TaskBackend):
         direction_text = "push" if direction == "up" else "trim"
         title = f"{direction_text.title()} {field.replace('_', ' ')}"
         fingerprint = f"{field}:{direction}:{updated}"
+        persona = FIELD_PERSONAS[field]
         return {
             "field": field,
             "from": current_value,
@@ -205,6 +243,9 @@ class TinyStoriesLocalBackend(TaskBackend):
             "title": title,
             "rationale": f"{direction_text} {field.replace('_', ' ')} to {rationale}.",
             "novelty_fingerprint": fingerprint,
+            "icon": persona["icon"],
+            "mood": persona["mood"],
+            "why": persona["why"],
         }
 
     def _load_dataset(self) -> dict[str, Any]:

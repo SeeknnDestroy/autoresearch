@@ -71,10 +71,17 @@ class StudioOrchestrator:
                 "session": None,
                 "best_run": None,
                 "recent_lessons": [],
+                "scoreboard": None,
+                "spotlight": None,
                 "next_move": "Start a session to generate the first baseline.",
             }
         best_run = next((run for run in session.runs if run.run_id == session.best_run_id), None)
         recent_lessons = [asdict(lesson) for lesson in session.lessons[-3:]]
+        completed_runs = [run for run in session.runs if run.status == "completed"]
+        kept_runs = [run for run in completed_runs if run.decision in {"keep", "baseline"}]
+        discarded_runs = [run for run in completed_runs if run.decision == "discard"]
+        crash_runs = [run for run in session.runs if run.decision == "crash"]
+        spotlight_run = session.runs[-1] if session.runs else None
         return {
             "session": {
                 "session_id": session.session_id,
@@ -84,6 +91,7 @@ class StudioOrchestrator:
                 "budget_policy": asdict(session.budget_policy),
                 "best_run_id": session.best_run_id,
                 "current_recipe_sha": session.current_recipe_sha,
+                "stage_headline": session.stage_headline,
                 "run_count": len(session.runs),
                 "created_at": session.created_at,
                 "updated_at": session.updated_at,
@@ -91,6 +99,13 @@ class StudioOrchestrator:
             },
             "best_run": asdict(best_run) if best_run else None,
             "recent_lessons": recent_lessons,
+            "scoreboard": {
+                "completed": len(completed_runs),
+                "kept": len(kept_runs),
+                "discarded": len(discarded_runs),
+                "crashes": len(crash_runs),
+            },
+            "spotlight": asdict(spotlight_run) if spotlight_run else None,
             "next_move": recent_lessons[-1]["follow_up"] if recent_lessons else "Baseline first, then widen or tighten one training dial.",
         }
 
@@ -113,6 +128,7 @@ class StudioOrchestrator:
                 current_recipe_sha=current_recipe_sha,
             )
             session.status = "running"
+            session.stage_headline = "The proposer is sketching the opening move."
             self.storage.save_session(session)
             self.broker.publish("session_started", {"session_id": session.session_id, "status": session.status})
             self._thread = threading.Thread(target=self._run_session, args=(session.session_id,), daemon=True)
@@ -163,6 +179,11 @@ class StudioOrchestrator:
         session = self.storage.load_session(session_id)
         session.status = "stopped" if session.stop_requested else "completed"
         session.finished_at = utc_now_iso()
+        session.stage_headline = (
+            "The lab wrapped the session and pinned the strongest local recipe."
+            if session.runs
+            else "The lab stopped before any run landed."
+        )
         self.storage.save_session(session)
         self.broker.publish("session_finished", {"session_id": session.session_id, "status": session.status})
 
@@ -178,24 +199,32 @@ class StudioOrchestrator:
             recipe_sha=session.current_recipe_sha,
             parent_recipe_sha=session.current_recipe_sha,
             status="running",
+            stage="proposer",
             decision="pending",
             change_spec=change_spec,
             proposal_note=change_spec.get("rationale", "Measure the untouched baseline."),
             implementer_note="Sync the recipe snapshot, run the local model, and capture metrics plus samples.",
         )
         session.runs.append(run)
+        session.stage_headline = self._stage_copy(run)
         self.storage.save_session(session)
-        self.broker.publish("run_started", {"session_id": session.session_id, "run_id": run.run_id, "title": run.title})
+        self.broker.publish(
+            "run_started",
+            {"session_id": session.session_id, "run_id": run.run_id, "title": run.title, "stage": run.stage},
+        )
         return run
 
     def _execute_run(self, session: SessionRecord, run: RunRecord, *, baseline_mode: bool) -> None:
         run_dir = self.storage.session_dir(session.session_id) / "runs" / run.run_id
         before_recipe = dict(session.current_recipe)
         try:
+            self._set_run_stage(session, run, "implementer")
+            self._set_run_stage(session, run, "runner")
             if baseline_mode:
                 result = self.backend.run_baseline(run_dir=run_dir)
             else:
                 result = self.backend.run_candidate(run.change_spec, run_dir=run_dir)
+            self._set_run_stage(session, run, "analyst")
             run.recipe_sha = result.recipe_sha
             run.metrics = result.metrics
             run.artifact_paths = result.artifact_paths
@@ -210,6 +239,7 @@ class StudioOrchestrator:
             self._finalize_decision(session, run, result.recipe)
         except Exception as exc:
             run.status = "crash"
+            run.stage = "analyst"
             run.decision = "crash"
             run.analyst_summary = f"Candidate crashed before evaluation completed: {exc}"
             run.follow_up = "Retreat to the last kept recipe and change only one dial next time."
@@ -224,8 +254,37 @@ class StudioOrchestrator:
                 "run_id": run.run_id,
                 "status": run.status,
                 "decision": run.decision,
+                "stage": run.stage,
             },
         )
+
+    def _set_run_stage(self, session: SessionRecord, run: RunRecord, stage: str) -> None:
+        run.stage = stage
+        session.stage_headline = self._stage_copy(run)
+        self.storage.save_session(session)
+        self.broker.publish(
+            "run_stage",
+            {
+                "session_id": session.session_id,
+                "run_id": run.run_id,
+                "stage": stage,
+                "headline": session.stage_headline,
+            },
+        )
+
+    def _stage_copy(self, run: RunRecord) -> str:
+        axis = run.change_spec.get("field", "baseline")
+        if run.stage == "proposer":
+            if run.change_spec.get("type") == "baseline":
+                return "The proposer is locking the first baseline before taking risks."
+            return f"The proposer is teeing up a move on {axis.replace('_', ' ')}."
+        if run.stage == "implementer":
+            return f"The implementer is wiring {run.title.lower()} into the recipe snapshot."
+        if run.stage == "runner":
+            return f"The runner is stress-testing {run.title.lower()} on the local TinyStories lane."
+        if run.stage == "analyst":
+            return f"The analyst is judging whether {run.title.lower()} deserves to stay."
+        return "The lab is moving."
 
     def _best_completed_run(self, session: SessionRecord, exclude_run_id: str | None = None) -> RunRecord | None:
         completed = [

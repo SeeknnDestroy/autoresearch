@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -48,14 +49,22 @@ class StudioStorage:
         session.updated_at = utc_now_iso()
         directory = self.session_dir(session.session_id)
         directory.mkdir(parents=True, exist_ok=True)
-        self.session_file(session.session_id).write_text(
-            json.dumps(session.to_dict(), indent=2),
-            encoding="utf-8",
-        )
+        target = self.session_file(session.session_id)
+        temp = target.with_suffix(".json.tmp")
+        temp.write_text(json.dumps(session.to_dict(), indent=2), encoding="utf-8")
+        temp.replace(target)
 
     def load_session(self, session_id: str) -> SessionRecord:
-        data = json.loads(self.session_file(session_id).read_text(encoding="utf-8"))
-        return SessionRecord.from_dict(data)
+        path = self.session_file(session_id)
+        last_error: Exception | None = None
+        for _ in range(3):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return SessionRecord.from_dict(data)
+            except json.JSONDecodeError as exc:
+                last_error = exc
+                time.sleep(0.02)
+        raise last_error if last_error else RuntimeError(f"Could not load session {session_id}")
 
     def latest_session(self) -> SessionRecord | None:
         session_id = self.latest_session_id()

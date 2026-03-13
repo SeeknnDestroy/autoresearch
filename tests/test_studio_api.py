@@ -90,3 +90,34 @@ def test_api_runs_end_to_end(tmp_path: Path) -> None:
     latest_report = client.get("/api/report/latest").json()
     assert latest_report["best_run"] is not None
     assert latest_report["recent_lessons"]
+    assert latest_report["scoreboard"]["completed"] >= 2
+    assert latest_report["session"]["stage_headline"]
+
+
+def test_storage_load_session_retries_partial_json(tmp_path: Path, monkeypatch) -> None:
+    storage = StudioStorage(tmp_path / ".studio")
+    backend = TinyStoriesLocalBackend(tmp_path / ".studio", device_preference="cpu", recipe_overrides=QUICK_OVERRIDES)
+    recipe = backend.prepare()
+    session = storage.create_session(
+        session_id="studio-retry",
+        task_id=backend.task_id,
+        repo_sha="deadbeef",
+        budget_policy=BudgetPolicy(),
+        current_recipe=recipe,
+        current_recipe_sha=backend.recipe_sha(recipe),
+    )
+
+    session_file = storage.session_file("studio-retry")
+    original_read_text = Path.read_text
+    calls = {"count": 0}
+
+    def flaky_read_text(self: Path, *args, **kwargs):
+        if self == session_file and calls["count"] == 0:
+            calls["count"] += 1
+            return ""
+        return original_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", flaky_read_text)
+    loaded = storage.load_session("studio-retry")
+
+    assert loaded.session_id == session.session_id
