@@ -56,7 +56,8 @@ Then open `http://127.0.0.1:8765` in your browser.
 What Studio adds:
 
 - a Mac-friendly local task backend for cheap baseline and candidate experiments
-- a browser UI with run timeline, metrics, recipe diffs, generated samples, and agent notes
+- a beginner-friendly Play Mode that explains the repo and the experiment loop in plain language
+- an Advanced Lab toggle for the full timeline, metrics, diffs, generated samples, and agent notes
 - a proposer / implementer / runner / analyst loop with keep-or-discard decisions
 - persisted session state in `.studio/`
 

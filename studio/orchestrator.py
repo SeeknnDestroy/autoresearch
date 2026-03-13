@@ -73,6 +73,7 @@ class StudioOrchestrator:
                 "recent_lessons": [],
                 "scoreboard": None,
                 "spotlight": None,
+                "play_view": self._empty_play_view(),
                 "next_move": "Start a session to generate the first baseline.",
             }
         best_run = next((run for run in session.runs if run.run_id == session.best_run_id), None)
@@ -82,6 +83,12 @@ class StudioOrchestrator:
         discarded_runs = [run for run in completed_runs if run.decision == "discard"]
         crash_runs = [run for run in session.runs if run.decision == "crash"]
         spotlight_run = session.runs[-1] if session.runs else None
+        scoreboard = {
+            "completed": len(completed_runs),
+            "kept": len(kept_runs),
+            "discarded": len(discarded_runs),
+            "crashes": len(crash_runs),
+        }
         return {
             "session": {
                 "session_id": session.session_id,
@@ -99,13 +106,14 @@ class StudioOrchestrator:
             },
             "best_run": asdict(best_run) if best_run else None,
             "recent_lessons": recent_lessons,
-            "scoreboard": {
-                "completed": len(completed_runs),
-                "kept": len(kept_runs),
-                "discarded": len(discarded_runs),
-                "crashes": len(crash_runs),
-            },
+            "scoreboard": scoreboard,
             "spotlight": asdict(spotlight_run) if spotlight_run else None,
+            "play_view": self._build_play_view(
+                session=session,
+                best_run=best_run,
+                spotlight_run=spotlight_run,
+                scoreboard=scoreboard,
+            ),
             "next_move": recent_lessons[-1]["follow_up"] if recent_lessons else "Baseline first, then widen or tighten one training dial.",
         }
 
@@ -285,6 +293,203 @@ class StudioOrchestrator:
         if run.stage == "analyst":
             return f"The analyst is judging whether {run.title.lower()} deserves to stay."
         return "The lab is moving."
+
+    def _empty_play_view(self) -> dict[str, Any]:
+        return {
+            "intro_title": "Play with a tiny AI lab",
+            "intro_body": (
+                "This repo lets an agent try one training idea at a time and keep it only if the model score gets better."
+            ),
+            "primary_cta": "Run a tiny experiment",
+            "current_moment_title": "What will happen when you press play?",
+            "current_moment_body": "The lab will measure the starting model, try one small idea, compare the score, and keep only the winner.",
+            "session_summary": {
+                "runs": "0 experiments",
+                "wins": "0 winners kept",
+            },
+            "score": {
+                "label": "Model score",
+                "value": "--",
+                "help": "Lower is better.",
+            },
+            "verdict": {
+                "title": "Nothing has happened yet",
+                "body": "Start a session and the Studio will explain each step in plain language.",
+            },
+            "last_change": {
+                "title": "No change yet",
+                "field_label": "Training setting",
+                "before": "--",
+                "after": "--",
+                "reason": "The first run is just the starting point.",
+            },
+            "sample": {
+                "title": "What the model wrote",
+                "body": "A sample will appear here once the first run finishes.",
+            },
+            "repo_map": self._repo_map(),
+            "steps": self._play_steps(None, None),
+        }
+
+    def _build_play_view(
+        self,
+        *,
+        session: SessionRecord,
+        best_run: RunRecord | None,
+        spotlight_run: RunRecord | None,
+        scoreboard: dict[str, int],
+    ) -> dict[str, Any]:
+        last_candidate = next((run for run in reversed(session.runs) if run.change_spec.get("type") != "baseline"), None)
+        metric_run = best_run or spotlight_run
+        score_value = (
+            f"{metric_run.metrics.get('val_bpb', 0):.4f}"
+            if metric_run and metric_run.metrics.get("val_bpb") is not None
+            else "--"
+        )
+        return {
+            "intro_title": "Play with a tiny AI lab",
+            "intro_body": (
+                "Autoresearch keeps trying one small training change at a time. If the model score gets better, it keeps the change. If not, it throws it away."
+            ),
+            "primary_cta": "Run a tiny experiment" if session.status != "running" else "The lab is already running",
+            "current_moment_title": "What is happening right now?",
+            "current_moment_body": self._play_current_moment(session, spotlight_run),
+            "session_summary": {
+                "runs": f"{scoreboard['completed']} experiment{'s' if scoreboard['completed'] != 1 else ''} finished",
+                "wins": f"{scoreboard['kept']} winner{'s' if scoreboard['kept'] != 1 else ''} kept",
+            },
+            "score": {
+                "label": "Model score",
+                "value": score_value,
+                "help": "Lower is better. The lab only keeps a change if this number goes down.",
+            },
+            "verdict": self._play_verdict(best_run, last_candidate),
+            "last_change": self._play_last_change(last_candidate),
+            "sample": {
+                "title": "What the model wrote",
+                "body": (
+                    (last_candidate or best_run).sample_text if (last_candidate or best_run) else "A sample will appear here once the first run finishes."
+                ),
+            },
+            "repo_map": self._repo_map(),
+            "steps": self._play_steps(session, spotlight_run),
+        }
+
+    def _play_current_moment(self, session: SessionRecord, spotlight_run: RunRecord | None) -> str:
+        if spotlight_run is None:
+            return "The lab is waiting for the first baseline run."
+        if session.status == "running":
+            if spotlight_run.change_spec.get("type") == "baseline":
+                return "The lab is measuring the starting model so it has something real to beat."
+            if spotlight_run.stage == "proposer":
+                return "The lab is choosing one small change idea to test next."
+            if spotlight_run.stage == "implementer":
+                return "The lab is applying that one change to the training settings."
+            if spotlight_run.stage == "runner":
+                return "The lab is running the changed model and collecting a new score."
+            if spotlight_run.stage == "analyst":
+                return "The lab is comparing the new score against the best score so far."
+        if spotlight_run.change_spec.get("type") == "baseline":
+            return "The baseline is done. From now on, every new idea gets judged against that starting score."
+        return "The latest test finished, and the lab has already decided whether to keep or throw away the change."
+
+    def _play_verdict(self, best_run: RunRecord | None, last_candidate: RunRecord | None) -> dict[str, str]:
+        if last_candidate is None:
+            if best_run is None:
+                return {
+                    "title": "Nothing has happened yet",
+                    "body": "Start a session and the Studio will explain each step in plain language.",
+                }
+            return {
+                "title": "The starting score is locked in",
+                "body": "The baseline gives the lab a real number to beat before it starts taking risks.",
+            }
+        candidate_score = float(last_candidate.metrics.get("val_bpb", 0.0))
+        if best_run and last_candidate.decision == "keep":
+            return {
+                "title": "That change helped",
+                "body": f"The score dropped to {candidate_score:.4f}, so the lab kept the new settings.",
+            }
+        if best_run:
+            best_score = float(best_run.metrics.get("val_bpb", 0.0))
+            return {
+                "title": "That change did not help",
+                "body": f"The score moved from {best_score:.4f} to {candidate_score:.4f}, so the lab threw the change away.",
+            }
+        return {
+            "title": "The lab is still learning",
+            "body": "A verdict will appear here once a non-baseline run finishes.",
+        }
+
+    def _play_last_change(self, last_candidate: RunRecord | None) -> dict[str, str]:
+        if last_candidate is None:
+            return {
+                "title": "No change yet",
+                "field_label": "Training setting",
+                "before": "--",
+                "after": "--",
+                "reason": "The first run is just the starting point.",
+            }
+        spec = last_candidate.change_spec
+        return {
+            "title": last_candidate.title,
+            "field_label": spec.get("field", "setting").replace("_", " ").title(),
+            "before": str(spec.get("from", "--")),
+            "after": str(spec.get("to", "--")),
+            "reason": spec.get("why") or spec.get("rationale") or "The lab is probing one small training change.",
+        }
+
+    def _repo_map(self) -> list[dict[str, str]]:
+        return [
+            {
+                "name": "prepare.py",
+                "role": "Sets up the data and the scoring rule.",
+            },
+            {
+                "name": "train.py",
+                "role": "Contains the model and the training loop the agent experiments on.",
+            },
+            {
+                "name": "program.md",
+                "role": "Tells the agent how to behave while it researches.",
+            },
+        ]
+
+    def _play_steps(self, session: SessionRecord | None, spotlight_run: RunRecord | None) -> list[dict[str, str]]:
+        steps = [
+            {
+                "title": "1. Measure the starting point",
+                "body": "Run the untouched model once so the lab has a real score to beat.",
+                "state": "upcoming",
+            },
+            {
+                "title": "2. Try one small idea",
+                "body": "Change one training setting, not everything at once.",
+                "state": "upcoming",
+            },
+            {
+                "title": "3. Compare the new score",
+                "body": "Look at the new result and compare it with the best score so far.",
+                "state": "upcoming",
+            },
+            {
+                "title": "4. Keep it or throw it away",
+                "body": "Keep the idea only if the score got better.",
+                "state": "upcoming",
+            },
+        ]
+        if session is None or not session.runs:
+            steps[0]["state"] = "active"
+            return steps
+
+        steps[0]["state"] = "done"
+        if len(session.runs) == 1 and session.status == "running":
+            return steps
+
+        steps[1]["state"] = "done" if len(session.runs) > 1 else "active"
+        steps[2]["state"] = "done" if spotlight_run and spotlight_run.stage == "analyst" else ("active" if len(session.runs) > 1 else "upcoming")
+        steps[3]["state"] = "done" if session.status in {"completed", "stopped"} or (spotlight_run and spotlight_run.status == "completed") else "upcoming"
+        return steps
 
     def _best_completed_run(self, session: SessionRecord, exclude_run_id: str | None = None) -> RunRecord | None:
         completed = [

@@ -92,6 +92,8 @@ def test_api_runs_end_to_end(tmp_path: Path) -> None:
     assert latest_report["recent_lessons"]
     assert latest_report["scoreboard"]["completed"] >= 2
     assert latest_report["session"]["stage_headline"]
+    assert latest_report["play_view"]["intro_title"]
+    assert latest_report["play_view"]["repo_map"]
 
 
 def test_storage_load_session_retries_partial_json(tmp_path: Path, monkeypatch) -> None:

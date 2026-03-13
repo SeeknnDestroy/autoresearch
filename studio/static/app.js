@@ -5,9 +5,35 @@ const state = {
   selectedRun: null,
   selectedLesson: null,
   eventSource: null,
+  mode: window.localStorage.getItem("studio-mode") || "play",
 };
 
 const elements = {
+  playView: document.getElementById("play-view"),
+  advancedView: document.getElementById("advanced-view"),
+  modePlay: document.getElementById("mode-play"),
+  modeAdvanced: document.getElementById("mode-advanced"),
+  playIntroTitle: document.getElementById("play-intro-title"),
+  playIntroBody: document.getElementById("play-intro-body"),
+  playMomentTitle: document.getElementById("play-moment-title"),
+  playMomentBody: document.getElementById("play-moment-body"),
+  playStartButton: document.getElementById("play-start-button"),
+  playStopButton: document.getElementById("play-stop-button"),
+  playSteps: document.getElementById("play-steps"),
+  playScoreLabel: document.getElementById("play-score-label"),
+  playScoreValue: document.getElementById("play-score-value"),
+  playScoreHelp: document.getElementById("play-score-help"),
+  playVerdictTitle: document.getElementById("play-verdict-title"),
+  playVerdictBody: document.getElementById("play-verdict-body"),
+  playChangeField: document.getElementById("play-change-field"),
+  playChangeTitle: document.getElementById("play-change-title"),
+  playChangeBefore: document.getElementById("play-change-before"),
+  playChangeAfter: document.getElementById("play-change-after"),
+  playChangeReason: document.getElementById("play-change-reason"),
+  playSummaryRuns: document.getElementById("play-summary-runs"),
+  playSummaryWins: document.getElementById("play-summary-wins"),
+  playSample: document.getElementById("play-sample"),
+  playRepoMap: document.getElementById("play-repo-map"),
   sessionStatus: document.getElementById("session-status"),
   sessionMeta: document.getElementById("session-meta"),
   bestMetric: document.getElementById("best-metric"),
@@ -60,6 +86,21 @@ function verdictClass(run = {}) {
   return run.decision || "pending";
 }
 
+function currentSpotlightRun() {
+  const running = state.runs.findLast((run) => run.status === "running");
+  if (running) return running;
+  return state.report?.spotlight || state.runs.at(-1) || null;
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  window.localStorage.setItem("studio-mode", mode);
+  elements.playView.hidden = mode !== "play";
+  elements.advancedView.hidden = mode !== "advanced";
+  elements.modePlay.classList.toggle("is-active", mode === "play");
+  elements.modeAdvanced.classList.toggle("is-active", mode === "advanced");
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -68,22 +109,54 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 
-function stageHeadlineFor(run) {
-  if (!run) return "The lab is waiting for its first baseline.";
-  if (run.stage === "runner") return `${run.title} is currently being stress-tested on the local lane.`;
-  if (run.stage === "analyst") return `The analyst is deciding whether ${run.title.toLowerCase()} earns a keeper badge.`;
-  if (run.stage === "implementer") return `The implementer is wiring ${run.title.toLowerCase()} into the recipe snapshot.`;
-  if (run.stage === "proposer") return `The proposer is teeing up ${run.title.toLowerCase()}.`;
-  return "The lab is moving.";
+function renderPlayView() {
+  const playView = state.report?.play_view;
+  if (!playView) return;
+
+  elements.playIntroTitle.textContent = text(playView.intro_title);
+  elements.playIntroBody.textContent = text(playView.intro_body);
+  elements.playMomentTitle.textContent = text(playView.current_moment_title);
+  elements.playMomentBody.textContent = text(playView.current_moment_body);
+  elements.playStartButton.textContent = text(playView.primary_cta, "Run a tiny experiment");
+  elements.playScoreLabel.textContent = text(playView.score?.label, "Model score");
+  elements.playScoreValue.textContent = text(playView.score?.value, "--");
+  elements.playScoreHelp.textContent = text(playView.score?.help, "Lower is better.");
+  elements.playVerdictTitle.textContent = text(playView.verdict?.title);
+  elements.playVerdictBody.textContent = text(playView.verdict?.body);
+  elements.playChangeField.textContent = text(playView.last_change?.field_label, "Training setting");
+  elements.playChangeTitle.textContent = text(playView.last_change?.title, "No change yet");
+  elements.playChangeBefore.textContent = text(playView.last_change?.before, "--");
+  elements.playChangeAfter.textContent = text(playView.last_change?.after, "--");
+  elements.playChangeReason.textContent = text(playView.last_change?.reason);
+  elements.playSummaryRuns.textContent = text(playView.session_summary?.runs, "0 experiments");
+  elements.playSummaryWins.textContent = text(playView.session_summary?.wins, "0 winners kept");
+  elements.playSample.textContent = text(playView.sample?.body, "A sample will appear here once the first run finishes.");
+
+  elements.playSteps.innerHTML = (playView.steps || [])
+    .map(
+      (step) => `
+        <article class="step-card step-${step.state}">
+          <span class="step-state">${step.state}</span>
+          <strong>${step.title}</strong>
+          <p>${text(step.body)}</p>
+        </article>
+      `,
+    )
+    .join("");
+
+  elements.playRepoMap.innerHTML = (playView.repo_map || [])
+    .map(
+      (item) => `
+        <article class="repo-card">
+          <strong>${item.name}</strong>
+          <p>${text(item.role)}</p>
+        </article>
+      `,
+    )
+    .join("");
 }
 
-function currentSpotlightRun() {
-  const running = state.runs.findLast((run) => run.status === "running");
-  if (running) return running;
-  return state.report?.spotlight || state.runs.at(-1) || null;
-}
-
-function renderReport() {
+function renderAdvancedReport() {
   const session = state.report?.session;
   const bestRun = state.report?.best_run;
   const spotlight = currentSpotlightRun();
@@ -94,7 +167,7 @@ function renderReport() {
   elements.sessionMeta.textContent = session
     ? `${session.run_count} run${session.run_count === 1 ? "" : "s"} on ${session.task_id}`
     : "No active session yet.";
-  elements.stageHeadline.textContent = session?.stage_headline || stageHeadlineFor(spotlight);
+  elements.stageHeadline.textContent = session?.stage_headline ?? "The lab is waiting for its first baseline.";
   elements.bestMetric.textContent = bestRun ? number(bestRun.metrics?.val_bpb, 4) : "--";
   elements.bestMeta.textContent = bestRun
     ? `${bestRun.title} held the crown at recipe ${bestRun.recipe_sha}`
@@ -127,7 +200,7 @@ function renderReport() {
     elements.reportLessons.innerHTML = `
       <article class="lesson-chip">
         <strong>No lessons yet</strong>
-        <p>Baseline first, then the analyst starts writing sharp notes about what the lab should keep and what it should throw away.</p>
+        <p>Baseline first, then the judge starts writing notes about what the lab should keep and what it should throw away.</p>
       </article>
     `;
   } else {
@@ -153,22 +226,19 @@ function renderReport() {
     elements.mutationAtlas.innerHTML = state.runs
       .slice(-4)
       .reverse()
-      .map((run) => {
-        const spec = run.change_spec || {};
-        const mood = spec.mood || (spec.type === "baseline" ? "reference lock" : "fresh mutation");
-        const why = spec.why || "Establish the current local reference point.";
-        return `
+      .map(
+        (run) => `
           <article class="atlas-card">
             <strong>${run.title}</strong>
-            <p>${mood} · ${why}</p>
+            <p>${text(run.change_spec?.mood || run.change_spec?.rationale || "Fresh mutation")}</p>
             <div class="badge-row">
               <span class="badge ${verdictClass(run)}">${run.decision}</span>
-              <span class="badge">${labelize(spec.field, "baseline")}</span>
+              <span class="badge">${labelize(run.change_spec?.field, "baseline")}</span>
               <span class="badge">${run.stage || "queued"}</span>
             </div>
           </article>
-        `;
-      })
+        `,
+      )
       .join("");
   }
 }
@@ -187,19 +257,14 @@ function renderRuns() {
     .map((run) => {
       const metric = run.metrics?.val_bpb !== undefined ? number(run.metrics.val_bpb, 4) : "--";
       const isActive = run.run_id === state.selectedRunId;
-      const delta = state.report?.best_run && run.metrics?.val_bpb !== undefined
-        ? Number(run.metrics.val_bpb) - Number(state.report.best_run.metrics.val_bpb)
-        : null;
-      const deltaText = delta === null ? "delta --" : `delta ${delta >= 0 ? "+" : ""}${delta.toFixed(4)}`;
       return `
         <article class="run-card ${isActive ? "active" : ""} ${run.status === "running" ? "is-running" : ""}" data-run-id="${run.run_id}">
           <strong>${run.title}</strong>
-          <p>${text(run.hypothesis, "No hypothesis recorded.")}</p>
+          <p>${text(run.hypothesis)}</p>
           <div class="run-meta">
             <span class="badge ${verdictClass(run)}">${run.decision}</span>
             <span class="badge">${run.stage || run.status}</span>
             <span class="badge">val_bpb ${metric}</span>
-            <span class="badge">${deltaText}</span>
           </div>
         </article>
       `;
@@ -223,7 +288,7 @@ function renderRunDetail() {
     elements.detailTitle.textContent = "No run selected";
     elements.detailBadges.innerHTML = `<span class="detail-badge">Idle</span>`;
     elements.detailHeadline.textContent = "Choose a run to inspect its pulse.";
-    elements.detailSubline.textContent = "The lab will surface the mutation vibe, stage, and verdict here.";
+    elements.detailSubline.textContent = "The full technical explanation lives here in Advanced Lab.";
     elements.detailStage.textContent = "idle";
     elements.metricsGrid.innerHTML = `
       <article class="metric-card">
@@ -254,22 +319,15 @@ function renderRunDetail() {
   }
 
   const spec = run.change_spec || {};
-  const bestMetric = state.report?.best_run?.metrics?.val_bpb;
-  const delta = bestMetric !== undefined && run.metrics?.val_bpb !== undefined
-    ? Number(run.metrics.val_bpb) - Number(bestMetric)
-    : null;
-  const deltaLabel = delta === null ? "delta --" : `delta ${delta >= 0 ? "+" : ""}${delta.toFixed(4)} vs best`;
-
   elements.detailTitle.textContent = run.title;
   elements.detailBadges.innerHTML = `
     <span class="detail-badge ${verdictClass(run)}">${run.decision}</span>
     <span class="detail-badge">${run.status}</span>
     <span class="detail-badge">${run.recipe_sha}</span>
-    <span class="detail-badge">${deltaLabel}</span>
   `;
   elements.detailHeadline.textContent = spec.type === "baseline"
     ? "The baseline established the first local reference pulse."
-    : `${spec.mood || "fresh mutation"} on ${labelize(spec.field)}.`;
+    : `${text(spec.mood, "Fresh mutation")} on ${labelize(spec.field)}.`;
   elements.detailSubline.textContent = spec.type === "baseline"
     ? "Everything after this run gets judged against this first held reference."
     : `${text(spec.why, "The proposer is exploring a new axis.")} ${text(lesson?.follow_up || run.follow_up, "")}`;
@@ -316,10 +374,10 @@ function renderRunDetail() {
           <span>from <strong>${spec.from}</strong></span>
           <span>to <strong>${spec.to}</strong></span>
         </div>
-        <p>${text(spec.why, "The proposer is probing one recipe dial at a time.")}</p>
+        <p>${text(spec.why, "The proposer is probing one small training change.")}</p>
       `;
-  elements.proposalNote.textContent = text(run.proposal_note);
-  elements.implementerNote.textContent = text(run.implementer_note);
+  elements.proposalNote.textContent = text(run.proposalNote || run.proposal_note, "No proposal note recorded.");
+  elements.implementerNote.textContent = text(run.implementerNote || run.implementer_note, "No implementer note recorded.");
   elements.analystNote.textContent = text(lesson?.summary ?? run.analyst_summary);
 }
 
@@ -333,13 +391,14 @@ async function refreshAll() {
 
   const spotlight = currentSpotlightRun();
   if (!state.selectedRunId && spotlight) {
-    state.selectedRunId = spotlight.run_id;
+    state.selectedRunId = state.report?.best_run?.run_id ?? spotlight.run_id;
   }
   if (state.selectedRunId && !state.runs.find((run) => run.run_id === state.selectedRunId)) {
-    state.selectedRunId = spotlight?.run_id ?? null;
+    state.selectedRunId = state.report?.best_run?.run_id ?? spotlight?.run_id ?? null;
   }
 
-  renderReport();
+  renderPlayView();
+  renderAdvancedReport();
   renderRuns();
   if (state.selectedRunId) {
     await loadRunDetail(state.selectedRunId);
@@ -366,8 +425,7 @@ function connectEvents() {
     state.eventSource.close();
   }
   state.eventSource = new EventSource("/api/events");
-  const events = ["session_started", "session_stopping", "session_finished", "run_started", "run_stage", "run_finished"];
-  for (const eventName of events) {
+  for (const eventName of ["session_started", "session_stopping", "session_finished", "run_started", "run_stage", "run_finished"]) {
     state.eventSource.addEventListener(eventName, () => {
       void refreshAll();
     });
@@ -375,32 +433,36 @@ function connectEvents() {
 }
 
 async function startSession() {
+  elements.playStartButton.disabled = true;
   elements.startButton.disabled = true;
   try {
     await fetchJson("/api/session/start", { method: "POST" });
     await refreshAll();
   } finally {
+    elements.playStartButton.disabled = false;
     elements.startButton.disabled = false;
   }
 }
 
 async function stopSession() {
+  elements.playStopButton.disabled = true;
   elements.stopButton.disabled = true;
   try {
     await fetchJson("/api/session/stop", { method: "POST" });
     await refreshAll();
   } finally {
+    elements.playStopButton.disabled = false;
     elements.stopButton.disabled = false;
   }
 }
 
-elements.startButton.addEventListener("click", () => {
-  void startSession();
-});
+elements.modePlay.addEventListener("click", () => setMode("play"));
+elements.modeAdvanced.addEventListener("click", () => setMode("advanced"));
+elements.playStartButton.addEventListener("click", () => void startSession());
+elements.startButton.addEventListener("click", () => void startSession());
+elements.playStopButton.addEventListener("click", () => void stopSession());
+elements.stopButton.addEventListener("click", () => void stopSession());
 
-elements.stopButton.addEventListener("click", () => {
-  void stopSession();
-});
-
+setMode(state.mode);
 void refreshAll();
 connectEvents();
