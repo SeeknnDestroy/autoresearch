@@ -1,7 +1,7 @@
 {
   "model": "qwen3.5:0.8b",
   "system_prompt": "You are a precise banking intent classifier. Choose exactly one label from the allowed list. Do not explain your reasoning. Return valid JSON only.",
-  "user_prompt_template": "Classify the banking support message into exactly one label.\n\nAllowed labels:\n{labels_block}\n\nFew-shot examples:\n{few_shot_block}\n\nReturn JSON with exactly this shape: {\"label\": \"one_of_the_allowed_labels\"}\n\nMessage:\n{text}",
+  "user_prompt_template": "Classify the banking support message into exactly one label.\n\nAllowed labels:\n{labels_block}\n\nFew-shot examples:\n{few_shot_block}\n\nReturn JSON with exactly this shape: {{\"label\": \"one_of_the_allowed_labels\"}}\n\nMessage:\n{text}",
   "options": {
     "temperature": 0,
     "top_p": 1,

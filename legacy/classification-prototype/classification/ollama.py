@@ -63,6 +63,7 @@ class OllamaClient:
         prompt: str,
         options: dict[str, Any] | None = None,
         schema: dict[str, Any] | None = None,
+        think: bool = False,
     ) -> OllamaGeneration:
         started = time.perf_counter()
         payload: dict[str, Any] = {
@@ -70,6 +71,7 @@ class OllamaClient:
             "system": system_prompt,
             "prompt": prompt,
             "stream": False,
+            "think": think,
             "options": options or {},
         }
         if schema is not None:

@@ -43,6 +43,7 @@ class ClassificationProfile:
     few_shot_examples: tuple[FewShotExample, ...]
     label_descriptions: dict[str, str]
     label_order: str | list[str]
+    candidate_selector: dict[str, Any] | None = None
 
     def ordered_labels(self, labels: list[str]) -> list[str]:
         if self.label_order == "alphabetical":
@@ -100,4 +101,5 @@ def load_profile(path: Path | str = DEFAULT_PROFILE_PATH) -> ClassificationProfi
         few_shot_examples=few_shot_examples,
         label_descriptions=label_descriptions,
         label_order=data.get("label_order", "alphabetical"),
+        candidate_selector=data.get("candidate_selector"),
     )

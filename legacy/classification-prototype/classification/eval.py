@@ -11,6 +11,7 @@ from .banking77 import DEFAULT_DATASET_DIR, Example, canonicalize_label_name, lo
 from .metrics import compute_metrics
 from .ollama import OllamaClient
 from .profile import ClassificationProfile, DEFAULT_PROFILE_PATH, load_profile
+from .retrieval import BowShortlistRetriever
 
 DEFAULT_OUTPUT_ROOT = Path("results") / "classification"
 CLASSIFICATION_SCHEMA = {
@@ -78,12 +79,14 @@ def evaluate_examples(
     labels: list[str],
     profile: ClassificationProfile,
     client: OllamaClient,
+    retriever: BowShortlistRetriever | None = None,
     limit: int | None = None,
 ) -> list[PredictionRecord]:
     predictions: list[PredictionRecord] = []
     active_examples = examples[:limit] if limit is not None else examples
     for example in active_examples:
-        prompt = profile.render_prompt(example.text, labels)
+        candidate_labels = retriever.shortlist(example.text, labels) if retriever is not None else labels
+        prompt = profile.render_prompt(example.text, candidate_labels)
         generation = client.generate_json(
             model=profile.model,
             system_prompt=profile.system_prompt,
@@ -91,7 +94,7 @@ def evaluate_examples(
             options=profile.options,
             schema=CLASSIFICATION_SCHEMA,
         )
-        pred_label, is_valid, error = parse_prediction(generation.raw_output, labels)
+        pred_label, is_valid, error = parse_prediction(generation.raw_output, candidate_labels)
         predictions.append(
             PredictionRecord(
                 record_id=example.record_id,
@@ -120,16 +123,25 @@ def evaluate_split(
 ) -> dict[str, object]:
     labels = load_labels(dataset_dir)
     examples = load_examples(dataset_dir, split)
+    train_examples = load_examples(dataset_dir, "train")
     profile = load_profile(profile_path)
     client = OllamaClient(base_url=base_url, timeout_seconds=timeout_seconds)
     if ensure_model:
         client.ensure_model_available(profile.model)
+    retriever = None
+    if profile.candidate_selector and profile.candidate_selector.get("type") == "bow_shortlist":
+        retriever = BowShortlistRetriever.from_examples(
+            train_examples,
+            top_k=int(profile.candidate_selector.get("top_k", 8)),
+            max_examples_per_label=int(profile.candidate_selector.get("max_examples_per_label", 80)),
+        )
 
     predictions = evaluate_examples(
         examples,
         labels=labels,
         profile=profile,
         client=client,
+        retriever=retriever,
         limit=limit,
     )
     metric_rows = [
