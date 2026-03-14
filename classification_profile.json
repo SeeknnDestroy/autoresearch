@@ -1,0 +1,26 @@
+{
+  "model": "qwen3.5:0.8b",
+  "system_prompt": "You are a precise banking intent classifier. Choose exactly one label from the allowed list. Do not explain your reasoning. Return valid JSON only.",
+  "user_prompt_template": "Classify the banking support message into exactly one label.\n\nAllowed labels:\n{labels_block}\n\nFew-shot examples:\n{few_shot_block}\n\nReturn JSON with exactly this shape: {\"label\": \"one_of_the_allowed_labels\"}\n\nMessage:\n{text}",
+  "options": {
+    "temperature": 0,
+    "top_p": 1,
+    "num_predict": 32
+  },
+  "label_order": "alphabetical",
+  "label_descriptions": {},
+  "few_shot_examples": [
+    {
+      "text": "My cash withdrawal was charged twice.",
+      "label": "cash_withdrawal"
+    },
+    {
+      "text": "I need to change the phone number on my account.",
+      "label": "change_phone_number"
+    },
+    {
+      "text": "Why did my transfer fail?",
+      "label": "beneficiary_not_allowed"
+    }
+  ]
+}

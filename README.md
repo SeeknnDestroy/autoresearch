@@ -39,6 +39,41 @@ uv run train.py
 
 If the above commands all work ok, your setup is working and you can go into autonomous research mode.
 
+## Local Classification Lane
+
+This repo also supports a lightweight local classification workflow for Banking77 using Ollama-backed prompt classification. The default profile targets `qwen3.5:0.8b` and keeps evaluation fixed so prompt iterations stay comparable.
+
+```bash
+# 1. Prepare Banking77 with a deterministic validation split
+uv run autoresearch-classify prepare
+
+# 2. Install and run Ollama locally, then pull the model
+ollama pull qwen3.5:0.8b
+
+# 3. Evaluate a split
+uv run autoresearch-classify eval --split val
+
+# 4. Log a single keep/discard iteration
+uv run autoresearch-classify loop --description "baseline prompt profile"
+```
+
+What stays fixed:
+
+- the public Banking77 train/test split
+- a deterministic stratified validation carve-out from train
+- strict JSON outputs with exactly one canonical label
+- macro-F1 as the primary metric, with accuracy, invalid-rate, and latency tracked alongside it
+
+What the agent is expected to tune:
+
+- `classification_profile.json`
+- prompt wording
+- few-shot examples
+- label descriptions
+- deterministic decoding settings
+
+Artifacts for the classification lane are written under `results/classification/`, which is already ignored by git.
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
@@ -56,6 +91,8 @@ prepare.py      — constants, data prep + runtime utilities (do not modify)
 train.py        — model, optimizer, training loop (agent modifies this)
 program.md      — agent instructions
 pyproject.toml  — dependencies
+classification/ — Banking77 prep, Ollama evaluation, experiment loop
+classification_profile.json — tracked prompt/inference profile for the classification lane
 ```
 
 ## Design choices
