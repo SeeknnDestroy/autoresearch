@@ -47,6 +47,23 @@ What you CANNOT do:
 - Add dependencies or modify `pyproject.toml`.
 - Modify `README.md`, `program.md`, tests, or any file other than `train.py`.
 
+## Non-Negotiable Constraints
+
+These constraints are absolute once the experiment loop begins:
+
+- Edit only `train.py`.
+- Do not change the validation set, dataset source, parser behavior in `prepare.py`, or comparison rules.
+- Do not switch away from the local Ollama model already defined by the repo setup.
+- Do not run side quests such as refactors, cleanup, docs changes, test changes, packaging changes, or workflow changes.
+- Do not stop the loop to ask for confirmation, permission, or prioritization.
+- Do not stop because a result is "good enough".
+- Do not replace the keep/discard loop with a grid search, manual sweep, or one-off benchmark script.
+- Do not "cheat" by shrinking evaluation, hand-picking examples, changing cached data, or comparing against any metric other than the fixed printed run summary.
+- Do not silently relax a failure. If a run crashes, either fix it by changing only `train.py` or log it as `crash`, reset, and continue.
+- Do not rewrite history or discard the current kept state unless the keep/discard rules say to discard the latest experiment.
+- Do not leave the branch dirty between experiments except for the untracked `results.tsv` and `run.log`.
+- Do not stop until the human explicitly interrupts you.
+
 ## Goal
 
 Get the highest `val_macro_f1` on the fixed validation set.
@@ -141,3 +158,5 @@ Do not ask whether this is a good stopping point.
 Do not stop because you found one improvement.
 
 Keep running until the human explicitly interrupts you.
+
+If you are unsure what to do next, choose the most reasonable next experiment and continue.

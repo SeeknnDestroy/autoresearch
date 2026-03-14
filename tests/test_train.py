@@ -62,6 +62,7 @@ def test_run_experiment_prints_fixed_summary(tmp_path: Path, capsys) -> None:
         dataset_dir=tmp_path / "dataset",
         output_root=tmp_path / "results",
         client=_FakeClient(),
+        limit=1,
     )
 
     captured = capsys.readouterr().out
@@ -69,4 +70,5 @@ def test_run_experiment_prints_fixed_summary(tmp_path: Path, capsys) -> None:
     assert "val_accuracy:" in captured
     assert "invalid_rate:" in captured
     assert "avg_latency_ms:" in captured
-    assert result["metrics"]["val_macro_f1"] == 1.0
+    assert result["metrics"]["val_macro_f1"] == 0.5
+    assert result["metrics"]["total_examples"] == 1

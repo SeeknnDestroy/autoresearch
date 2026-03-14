@@ -352,6 +352,7 @@ def run_experiment(
     dataset_dir: Path | str = DATASET_DIR,
     output_root: Path | str = RESULTS_ROOT,
     client: OllamaClient | None = None,
+    limit: int | None = None,
 ) -> dict[str, object]:
     active_client = client or OllamaClient()
     if client is None:
@@ -360,6 +361,8 @@ def run_experiment(
     labels = load_labels(dataset_dir)
     train_examples = load_examples("train", dataset_dir)
     val_examples = load_examples("val", dataset_dir)
+    if limit is not None:
+        val_examples = val_examples[:limit]
     context = ExperimentContext(labels=labels, train_examples=train_examples)
     started = time.perf_counter()
 
@@ -409,6 +412,7 @@ def run_experiment(
             "model": model_name,
             "dataset_dir": str(Path(dataset_dir)),
             "output_root": str(Path(output_root)),
+            "limit": limit,
         }
     )
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

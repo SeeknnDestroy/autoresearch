@@ -6,6 +6,7 @@ All strategy changes should happen here. `prepare.py` owns the fixed evaluator.
 
 from __future__ import annotations
 
+import argparse
 import math
 import re
 from collections import Counter, defaultdict
@@ -136,7 +137,16 @@ def build_request(example: Example, context: ExperimentContext) -> InferenceRequ
 
 
 def main() -> None:
-    run_experiment(build_request, model_name=MODEL_NAME)
+    parser = argparse.ArgumentParser(description="Run one classification autoresearch experiment.")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Optional smoke-test limit for the number of validation examples to evaluate. "
+        "Omit for the full fixed validation run.",
+    )
+    args = parser.parse_args()
+    run_experiment(build_request, model_name=MODEL_NAME, limit=args.limit)
 
 
 if __name__ == "__main__":
